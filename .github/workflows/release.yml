@@ -40,9 +40,9 @@ jobs:
     - name: Compile AHK Script
       uses: CCCC-L/Action-Ahk2Exe@main
       with:
-        input-file: VolumeHotkey.ahk
-        output-file: VolumeHotkey.exe
-        icon-file: icon.ico
+        in: VolumeHotkey.ahk
+        out: VolumeHotkey.exe
+        base: AutoHotkey64.exe
         
     - name: Prepare Release
       shell: pwsh
