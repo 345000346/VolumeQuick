@@ -19,24 +19,42 @@ jobs:
       id: info
       shell: pwsh
       run: |
-        # 设置日期
-        $date = Get-Date -Format "yyyyMMdd"
-        "DATE=$date" | Out-File -FilePath $env:GITHUB_ENV -Append
-        
-        # 获取最新提交信息（转义特殊字符）
-        $latestCommit = (git log -1 --pretty=format:"%B") -replace '"','\"' -replace "'","\'"
-        echo "COMMIT_MSG=$latestCommit" | Out-File -FilePath $env:GITHUB_ENV -Append
-        
-        # 获取变更记录（转义特殊字符并限制长度）
-        $lastTag = git describe --tags --abbrev=0 2>$null
-        if ($lastTag) {
-            $changes = git log "$lastTag..HEAD" --pretty=format:"- %s" | Select-Object -First 10
-        } else {
-            $changes = git log --pretty=format:"- %s" | Select-Object -First 10
+        try {
+            Write-Host "正在获取日期..."
+            $date = Get-Date -Format "yyyyMMdd"
+            "DATE=$date" | Out-File -FilePath $env:GITHUB_ENV -Append
+            Write-Host "日期设置成功: $date"
+            
+            Write-Host "正在获取最新提交信息..."
+            $latestCommit = git log -1 --pretty=format:"%B"
+            if ($LASTEXITCODE -ne 0) { throw "获取提交信息失败" }
+            
+            $escapedCommit = $latestCommit -replace '"','\"' -replace "'","\'"
+            "COMMIT_MSG=$escapedCommit" | Out-File -FilePath $env:GITHUB_ENV -Append
+            Write-Host "提交信息获取成功"
+            
+            Write-Host "正在获取变更记录..."
+            $changes = @()
+            $lastTag = git describe --tags --abbrev=0 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "找到最新标签: $lastTag"
+                $changes = git log "$lastTag..HEAD" --pretty=format:"- %s"
+            } else {
+                Write-Host "未找到标签，获取所有提交记录"
+                $changes = git log --pretty=format:"- %s"
+            }
+            
+            $changes = $changes | Select-Object -First 10
+            $escapedChanges = ($changes -join "`n") -replace '"','\"' -replace "'","\'"
+            "CHANGES<<EOF`n$escapedChanges`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Append
+            Write-Host "变更记录获取成功"
+            
+        } catch {
+            Write-Host "错误: $_"
+            Write-Host "Stack Trace: $($_.ScriptStackTrace)"
+            exit 1
         }
-        $changes = ($changes -join "`n") -replace '"','\"' -replace "'","\'"
-        echo "CHANGES<<EOF`n$changes`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Append
-    
+        
     - name: Compile AHK Script
       uses: CCCC-L/Action-Ahk2Exe@main
       with:
