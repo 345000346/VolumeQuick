@@ -2,6 +2,7 @@ name: Build and Release
 
 on:
   push:
+    branches: [ main, master ]  # 监听主分支推送
     tags:
       - 'v*'
 
@@ -11,20 +12,36 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # 获取完整历史记录用于生成变更日志
     
-    - name: Get current date
-      id: date
+    - name: Get current date and commit info
+      id: info
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
         "DATE=$date" >> $env:GITHUB_ENV
+        
+        # 获取最新的提交信息
+        $latestCommit = git log -1 --pretty=format:"%B"
+        "COMMIT_MSG=$latestCommit" >> $env:GITHUB_ENV
+        
+        # 获取自上次发布以来的所有提交
+        $lastTag = git describe --tags --abbrev=0 2>$null
+        if ($lastTag) {
+            $changes = git log "$lastTag..HEAD" --pretty=format:"* %s"
+        } else {
+            $changes = git log --pretty=format:"* %s"
+        }
+        $changes = $changes -join "`n"
+        "CHANGES=$changes" >> $env:GITHUB_ENV
     
     - name: Download AutoHotkey
       shell: pwsh
       run: |
         Invoke-WebRequest -Uri "https://www.autohotkey.com/download/ahk-v2.exe" -OutFile "ahk-v2.exe"
         .\ahk-v2.exe /S
-        Start-Sleep -Seconds 5  # 等待安装完成
+        Start-Sleep -Seconds 5
     
     - name: Compile AHK Script
       shell: pwsh
@@ -32,30 +49,38 @@ jobs:
         $compiler = "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe"
         $base = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
         
-        # 确保编译器存在
         if (!(Test-Path $compiler)) {
             throw "找不到 AHK 编译器"
         }
         
-        # 编译脚本
         & $compiler /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe" /icon "icon.ico" /base $base
         
         if (!(Test-Path "VolumeHotkey.exe")) {
             throw "编译失败：未生成 exe 文件"
         }
         
-        # 创建发布包
         New-Item -ItemType Directory -Path "release" -Force
         Copy-Item "VolumeHotkey.exe" -Destination "release\"
         Compress-Archive -Path "release\VolumeHotkey.exe" -DestinationPath "VolumeHotkey$env:DATE.zip" -Force
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
+        tag_name: auto-release-${{ env.DATE }}  # 自动创建标签
+        name: VolumeHotkey Build ${{ env.DATE }}
+        body: |
+          ## 最新更改
+          ${{ env.CHANGES }}
+          
+          ## 提交信息
+          ${{ env.COMMIT_MSG }}
+          
+          ## 构建信息
+          * 构建时间：${{ env.DATE }}
+          * 分支：${{ github.ref_name }}
+          * 提交：${{ github.sha }}
         files: VolumeHotkey${{ env.DATE }}.zip
         draft: false
         prerelease: false
-        generate_release_notes: true
