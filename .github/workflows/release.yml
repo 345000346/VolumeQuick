@@ -70,14 +70,36 @@ jobs:
           }
         }
         
-        # 安装 AHK
+        # 安装 AHK（使用不同的安装方法）
         Write-Host "正在安装 AutoHotkey..."
-        Start-Process -FilePath "ahk-setup.exe" -ArgumentList "/S" -Wait
+        $process = Start-Process -FilePath "ahk-setup.exe" -ArgumentList "/S" -PassThru -NoNewWindow
+        Write-Host "安装进程ID: $($process.Id)"
+        
+        # 等待安装完成，设置超时时间
+        $timeout = 300 # 5分钟超时
+        $timer = [System.Diagnostics.Stopwatch]::StartNew()
+        while (!$process.HasExited) {
+            if ($timer.Elapsed.TotalSeconds -gt $timeout) {
+                Write-Host "安装超时，强制结束进程..."
+                $process.Kill()
+                throw "AutoHotkey 安装超时"
+            }
+            Write-Host "等待安装完成，已耗时: $([int]$timer.Elapsed.TotalSeconds) 秒"
+            Start-Sleep -Seconds 10
+        }
+        
+        Write-Host "安装进程已结束，退出代码: $($process.ExitCode)"
+        if ($process.ExitCode -ne 0) {
+            throw "AutoHotkey 安装失败，退出代码: $($process.ExitCode)"
+        }
         
         # 验证安装
         $ahkPath = "C:\Program Files\AutoHotkey\v2"
+        Start-Sleep -Seconds 5  # 等待文件系统同步
         if (!(Test-Path $ahkPath)) {
-          throw "AutoHotkey 安装验证失败"
+          Write-Host "当前目录内容："
+          Get-ChildItem "C:\Program Files" -Recurse | ForEach-Object { Write-Host $_.FullName }
+          throw "AutoHotkey 安装验证失败，目录不存在: $ahkPath"
         }
         Write-Host "AutoHotkey 安装成功"
     
