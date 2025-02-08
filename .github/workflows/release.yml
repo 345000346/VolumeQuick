@@ -37,92 +37,20 @@ jobs:
         $changes = ($changes -join "`n") -replace '"','\"' -replace "'","\'"
         echo "CHANGES<<EOF`n$changes`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Append
     
-    - name: Setup AutoHotkey
-      shell: pwsh
-      run: |
-        # 首选从 GitHub Release 下载
-        try {
-          $ahkUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.11/AutoHotkey_2.0.11_setup.exe"
-          Write-Host "正在从 GitHub 下载 AutoHotkey..."
-          Invoke-WebRequest -Uri $ahkUrl -OutFile "ahk-setup.exe" -UseBasicParsing
-        } catch {
-          # 备用下载链接
-          $backupUrls = @(
-            "https://www.autohotkey.com/download/2.0/AutoHotkey_2.0.11_setup.exe",
-            "https://ftp.autohotkey.com/AutoHotkey_2.0.11_setup.exe"
-          )
-          
-          $success = $false
-          foreach ($url in $backupUrls) {
-            try {
-              Write-Host "尝试备用下载链接: $url"
-              Invoke-WebRequest -Uri $url -OutFile "ahk-setup.exe" -UseBasicParsing
-              $success = $true
-              break
-            } catch {
-              Write-Host "备用下载失败: $_"
-              continue
-            }
-          }
-          
-          if (!$success) {
-            throw "所有下载尝试均失败"
-          }
-        }
-        
-        # 安装 AHK（使用不同的安装方法）
-        Write-Host "正在安装 AutoHotkey..."
-        $process = Start-Process -FilePath "ahk-setup.exe" -ArgumentList "/S" -PassThru -NoNewWindow
-        Write-Host "安装进程ID: $($process.Id)"
-        
-        # 等待安装完成，设置超时时间
-        $timeout = 300 # 5分钟超时
-        $timer = [System.Diagnostics.Stopwatch]::StartNew()
-        while (!$process.HasExited) {
-            if ($timer.Elapsed.TotalSeconds -gt $timeout) {
-                Write-Host "安装超时，强制结束进程..."
-                $process.Kill()
-                throw "AutoHotkey 安装超时"
-            }
-            Write-Host "等待安装完成，已耗时: $([int]$timer.Elapsed.TotalSeconds) 秒"
-            Start-Sleep -Seconds 10
-        }
-        
-        Write-Host "安装进程已结束，退出代码: $($process.ExitCode)"
-        if ($process.ExitCode -ne 0) {
-            throw "AutoHotkey 安装失败，退出代码: $($process.ExitCode)"
-        }
-        
-        # 验证安装
-        $ahkPath = "C:\Program Files\AutoHotkey\v2"
-        Start-Sleep -Seconds 5  # 等待文件系统同步
-        if (!(Test-Path $ahkPath)) {
-          Write-Host "当前目录内容："
-          Get-ChildItem "C:\Program Files" -Recurse | ForEach-Object { Write-Host $_.FullName }
-          throw "AutoHotkey 安装验证失败，目录不存在: $ahkPath"
-        }
-        Write-Host "AutoHotkey 安装成功"
-    
     - name: Compile AHK Script
+      uses: CCCC-L/Action-Ahk2Exe@main
+      with:
+        input-file: VolumeHotkey.ahk
+        output-file: VolumeHotkey.exe
+        icon-file: icon.ico
+        
+    - name: Prepare Release
       shell: pwsh
       run: |
-        $compiler = "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe"
-        $base = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
-        
-        if (!(Test-Path $compiler)) {
-            throw "找不到 AHK 编译器"
-        }
-        
-        & $compiler /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe" /icon "icon.ico" /base $base
-        
-        if (!(Test-Path "VolumeHotkey.exe")) {
-            throw "编译失败：未生成 exe 文件"
-        }
-        
         New-Item -ItemType Directory -Path "release" -Force
         Copy-Item "VolumeHotkey.exe" -Destination "release\"
         Compress-Archive -Path "release\VolumeHotkey.exe" -DestinationPath "VolumeHotkey$env:DATE.zip" -Force
-    
+
     - name: Create Release
       uses: softprops/action-gh-release@v1
       env:
