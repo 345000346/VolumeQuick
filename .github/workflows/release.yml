@@ -2,10 +2,15 @@ name: Build and Release
 
 on:
   push:
-    branches: [ main, master ]  # 监听主分支推送
+    branches: [ main, master ]
     tags:
       - 'v*'
 
+# 添加权限配置
+permissions:
+  contents: write
+  packages: write
+  
 jobs:
   build:
     runs-on: windows-latest
