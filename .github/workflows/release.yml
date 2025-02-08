@@ -60,7 +60,6 @@ jobs:
       with:
         in: VolumeHotkey.ahk
         out: VolumeHotkey.exe
-        base: AutoHotkey64.exe
         
     - name: Prepare Release
       shell: pwsh
