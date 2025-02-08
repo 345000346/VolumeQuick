@@ -37,12 +37,49 @@ jobs:
         $changes = ($changes -join "`n") -replace '"','\"' -replace "'","\'"
         echo "CHANGES<<EOF`n$changes`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Append
     
-    - name: Download AutoHotkey
+    - name: Setup AutoHotkey
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://www.autohotkey.com/download/ahk-v2.exe" -OutFile "ahk-v2.exe"
-        .\ahk-v2.exe /S
-        Start-Sleep -Seconds 5
+        # 首选从 GitHub Release 下载
+        try {
+          $ahkUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.11/AutoHotkey_2.0.11_setup.exe"
+          Write-Host "正在从 GitHub 下载 AutoHotkey..."
+          Invoke-WebRequest -Uri $ahkUrl -OutFile "ahk-setup.exe" -UseBasicParsing
+        } catch {
+          # 备用下载链接
+          $backupUrls = @(
+            "https://www.autohotkey.com/download/2.0/AutoHotkey_2.0.11_setup.exe",
+            "https://ftp.autohotkey.com/AutoHotkey_2.0.11_setup.exe"
+          )
+          
+          $success = $false
+          foreach ($url in $backupUrls) {
+            try {
+              Write-Host "尝试备用下载链接: $url"
+              Invoke-WebRequest -Uri $url -OutFile "ahk-setup.exe" -UseBasicParsing
+              $success = $true
+              break
+            } catch {
+              Write-Host "备用下载失败: $_"
+              continue
+            }
+          }
+          
+          if (!$success) {
+            throw "所有下载尝试均失败"
+          }
+        }
+        
+        # 安装 AHK
+        Write-Host "正在安装 AutoHotkey..."
+        Start-Process -FilePath "ahk-setup.exe" -ArgumentList "/S" -Wait
+        
+        # 验证安装
+        $ahkPath = "C:\Program Files\AutoHotkey\v2"
+        if (!(Test-Path $ahkPath)) {
+          throw "AutoHotkey 安装验证失败"
+        }
+        Write-Host "AutoHotkey 安装成功"
     
     - name: Compile AHK Script
       shell: pwsh
