@@ -23,15 +23,21 @@ jobs:
     
     - name: Compile AHK Script
       run: |
-        $outputFile = "VolumeQuick$($env:DATE).exe"
-        & "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out $outputFile /icon "icon.ico" /base "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
+        # 先编译为固定名称的exe
+        & "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe" /icon "icon.ico" /base "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
+        
+        # 创建带日期的发布包
+        New-Item -ItemType Directory -Path "release"
+        Copy-Item "VolumeHotkey.exe" -Destination "release\"
+        $zipName = "VolumeHotkey$($env:DATE).zip"
+        Compress-Archive -Path "release\*" -DestinationPath $zipName
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: VolumeQuick${{ env.DATE }}.exe
+        files: VolumeHotkey${{ env.DATE }}.zip
         draft: false
         prerelease: false
         generate_release_notes: true
