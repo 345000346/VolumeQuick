@@ -40,16 +40,20 @@ jobs:
             
             Write-Host "正在获取变更记录..."
             $changes = @()
-            $lastTag = git describe --tags --abbrev=0 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "找到最新标签: $lastTag"
-                $changes = git log "$lastTag..HEAD" --pretty=format:"- %s"
+            # 获取最后一个编译版本的标签
+            $lastBuildTag = git tag -l "VolumeHotkey*" | Sort-Object -Descending | Select-Object -First 1
+            if ($lastBuildTag) {
+                Write-Host "找到最新编译标签: $lastBuildTag"
+                $changes = git log "$lastBuildTag..HEAD" --pretty=format:"- %s"
             } else {
-                Write-Host "未找到标签，获取所有提交记录"
+                Write-Host "未找到编译标签，获取所有提交记录"
                 $changes = git log --pretty=format:"- %s"
             }
             
-            $changes = $changes | Select-Object -First 10
+            if ($changes.Count -eq 0) {
+                $changes = @("- 无新增变更")
+            }
+            
             $escapedChanges = ($changes -join "`n") -replace '"','\"' -replace "'","\'"
             "CHANGES<<EOF`n$escapedChanges`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Append
             Write-Host "变更记录获取成功"
@@ -66,28 +70,17 @@ jobs:
         in: VolumeHotkey.ahk
         out: VolumeHotkey.exe
         
-    - name: Prepare Release
-      shell: pwsh
-      run: |
-        New-Item -ItemType Directory -Path "release" -Force
-        Copy-Item "VolumeHotkey.exe" -Destination "release\"
-        Compress-Archive -Path "release\VolumeHotkey.exe" -DestinationPath "VolumeHotkey$env:DATE.zip" -Force
-
     - name: Create Release
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: build-${{ env.DATE }}
-        name: VolumeHotkey Build ${{ env.DATE }}
+        tag_name: VolumeHotkey${{ env.DATE }}
+        name: VolumeHotkey${{ env.DATE }}
         body: |
           ## 更新内容
           ${{ env.CHANGES }}
           
-          ## 构建信息
-          - 构建时间：${{ env.DATE }}
-          - 分支：${{ github.ref_name }}
-          - 提交：${{ github.sha }}
-        files: VolumeHotkey${{ env.DATE }}.zip
+        files: VolumeHotkey.exe
         draft: false
         prerelease: false
