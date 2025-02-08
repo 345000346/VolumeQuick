@@ -14,26 +14,44 @@ jobs:
     
     - name: Get current date
       id: date
-      run: echo "DATE=$(Get-Date -Format 'yyyyMMdd')" | Out-File -FilePath $env:GITHUB_ENV -Append
+      shell: pwsh
+      run: |
+        $date = Get-Date -Format "yyyyMMdd"
+        "DATE=$date" >> $env:GITHUB_ENV
     
     - name: Download AutoHotkey
+      shell: pwsh
       run: |
         Invoke-WebRequest -Uri "https://www.autohotkey.com/download/ahk-v2.exe" -OutFile "ahk-v2.exe"
-        Start-Process -FilePath "ahk-v2.exe" -ArgumentList "/S" -Wait
+        .\ahk-v2.exe /S
+        Start-Sleep -Seconds 5  # 等待安装完成
     
     - name: Compile AHK Script
+      shell: pwsh
       run: |
-        # 先编译为固定名称的exe
-        & "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe" /icon "icon.ico" /base "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
+        $compiler = "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe"
+        $base = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
         
-        # 创建带日期的发布包
-        New-Item -ItemType Directory -Path "release"
+        # 确保编译器存在
+        if (!(Test-Path $compiler)) {
+            throw "找不到 AHK 编译器"
+        }
+        
+        # 编译脚本
+        & $compiler /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe" /icon "icon.ico" /base $base
+        
+        if (!(Test-Path "VolumeHotkey.exe")) {
+            throw "编译失败：未生成 exe 文件"
+        }
+        
+        # 创建发布包
+        New-Item -ItemType Directory -Path "release" -Force
         Copy-Item "VolumeHotkey.exe" -Destination "release\"
-        $zipName = "VolumeHotkey$($env:DATE).zip"
-        Compress-Archive -Path "release\*" -DestinationPath $zipName
+        Compress-Archive -Path "release\VolumeHotkey.exe" -DestinationPath "VolumeHotkey$env:DATE.zip" -Force
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
