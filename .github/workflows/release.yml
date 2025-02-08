@@ -19,22 +19,23 @@ jobs:
       id: info
       shell: pwsh
       run: |
+        # 设置日期
         $date = Get-Date -Format "yyyyMMdd"
-        "DATE=$date" >> $env:GITHUB_ENV
+        "DATE=$date" | Out-File -FilePath $env:GITHUB_ENV -Append
         
-        # 获取最新的提交信息
-        $latestCommit = git log -1 --pretty=format:"%B"
-        "COMMIT_MSG=$latestCommit" >> $env:GITHUB_ENV
+        # 获取最新提交信息（转义特殊字符）
+        $latestCommit = (git log -1 --pretty=format:"%B") -replace '"','\"' -replace "'","\'"
+        echo "COMMIT_MSG=$latestCommit" | Out-File -FilePath $env:GITHUB_ENV -Append
         
-        # 获取自上次发布以来的所有提交
+        # 获取变更记录（转义特殊字符并限制长度）
         $lastTag = git describe --tags --abbrev=0 2>$null
         if ($lastTag) {
-            $changes = git log "$lastTag..HEAD" --pretty=format:"* %s"
+            $changes = git log "$lastTag..HEAD" --pretty=format:"- %s" | Select-Object -First 10
         } else {
-            $changes = git log --pretty=format:"* %s"
+            $changes = git log --pretty=format:"- %s" | Select-Object -First 10
         }
-        $changes = $changes -join "`n"
-        "CHANGES=$changes" >> $env:GITHUB_ENV
+        $changes = ($changes -join "`n") -replace '"','\"' -replace "'","\'"
+        echo "CHANGES<<EOF`n$changes`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Append
     
     - name: Download AutoHotkey
       shell: pwsh
@@ -68,19 +69,16 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: auto-release-${{ env.DATE }}  # 自动创建标签
+        tag_name: build-${{ env.DATE }}
         name: VolumeHotkey Build ${{ env.DATE }}
         body: |
-          ## 最新更改
+          ## 更新内容
           ${{ env.CHANGES }}
           
-          ## 提交信息
-          ${{ env.COMMIT_MSG }}
-          
           ## 构建信息
-          * 构建时间：${{ env.DATE }}
-          * 分支：${{ github.ref_name }}
-          * 提交：${{ github.sha }}
+          - 构建时间：${{ env.DATE }}
+          - 分支：${{ github.ref_name }}
+          - 提交：${{ github.sha }}
         files: VolumeHotkey${{ env.DATE }}.zip
         draft: false
         prerelease: false
