@@ -10,6 +10,9 @@
 - 🚀 支持开机自启动
 - 💡 低资源占用，运行流畅
 - 🎯 系统托盘快捷操作
+- 🛡️ 自动检测游戏进程，避免与EA Sports FC 24等游戏冲突
+- ⚡ 性能优化，减少系统资源消耗
+- 🔧 稳定性改进，增强错误处理
 
 ## 🚀 使用方法
 
@@ -17,6 +20,17 @@
 2. 使用鼠标滚轮上下滚动调节音量
 3. 点击鼠标中键切换静音状态
 4. 右键系统托盘图标可设置开机启动
+
+## 🛡️ 游戏兼容性
+
+本工具已优化以避免与以下游戏冲突：
+- EA Sports FC 24 / FIFA系列
+- Steam平台游戏
+- Epic Games平台游戏
+- CS:GO/CS2, Valorant, PUBG, Apex Legends
+- League of Legends, Dota 2
+- Overwatch, Rocket League, Rainbow Six
+- Fortnite, Battlefield, World of Warcraft
 
 ## 💻 系统要求
 
