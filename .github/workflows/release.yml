@@ -19,14 +19,19 @@ jobs:
       with:
         fetch-depth: 0
     
-    - name: Setup AutoHotkey
-      uses: Zahni/Setup-AutoHotkey@main
-      with:
-        ahk-version: '2.0'
+    - name: Install AutoHotkey v2
+      run: |
+        # Download and install AutoHotkey v2
+        Invoke-WebRequest -Uri "https://www.autohotkey.com/download/2.0/AutoHotkey_2.0-setup.exe" -OutFile "AutoHotkey_setup.exe"
+        Start-Process -FilePath ".\AutoHotkey_setup.exe" -ArgumentList "/S" -Wait
         
     - name: Compile AHK Script
       run: |
-        # 使用AutoHotkey v2的编译器
+        # Wait a moment for installation to complete
+        Start-Sleep -s 5
+        # Verify installation
+        & "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" --version
+        # Compile the script
         Copy-Item "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe" -Destination "."
         .\Ahk2Exe.exe /in VolumeHotkey.ahk /out VolumeHotkey.exe
         
