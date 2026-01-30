@@ -6,6 +6,7 @@ on:
     tags:
       - 'v*'
 
+# 添加权限配置
 permissions:
   contents: write
   packages: write
@@ -15,47 +16,71 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v2
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # 获取完整历史记录用于生成变更日志
     
-    - name: Setup AutoHotkey
-      uses: Zahni/Setup-AutoHotkey@main
-      with:
-        ahk-version: '2.0'
-        
-    - name: Compile AHK Script
-      run: |
-        # 使用AutoHotkey v2的编译器
-        Copy-Item "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe" -Destination "."
-        .\Ahk2Exe.exe /in VolumeHotkey.ahk /out VolumeHotkey.exe
-        
     - name: Get current date and commit info
       id: info
       shell: pwsh
       run: |
-        $date = Get-Date -Format "yyyyMMdd"
-        echo "DATE=$date" >> $env:GITHUB_OUTPUT
+        try {
+            Write-Host "正在获取日期..."
+            $date = Get-Date -Format "yyyyMMdd"
+            "DATE=$date" | Out-File -FilePath $env:GITHUB_ENV -Append
+            Write-Host "日期设置成功: $date"
+            
+            Write-Host "正在获取最新提交信息..."
+            $latestCommit = git log -1 --pretty=format:"%B"
+            if ($LASTEXITCODE -ne 0) { throw "获取提交信息失败" }
+            
+            $escapedCommit = $latestCommit -replace '"','\"' -replace "'","\'"
+            "COMMIT_MSG=$escapedCommit" | Out-File -FilePath $env:GITHUB_ENV -Append
+            Write-Host "提交信息获取成功"
+            
+            Write-Host "正在获取变更记录..."
+            $changes = @()
+            # 获取最后一个编译版本的标签
+            $lastBuildTag = git tag -l "VolumeHotkey*" | Sort-Object -Descending | Select-Object -First 1
+            if ($lastBuildTag) {
+                Write-Host "找到最新编译标签: $lastBuildTag"
+                $changes = git log "$lastBuildTag..HEAD" --pretty=format:"- %s"
+            } else {
+                Write-Host "未找到编译标签，获取所有提交记录"
+                $changes = git log --pretty=format:"- %s"
+            }
+            
+            if ($changes.Count -eq 0) {
+                $changes = @("- 无新增变更")
+            }
+            
+            $escapedChanges = ($changes -join "`n") -replace '"','\"' -replace "'","\'"
+            "CHANGES<<EOF`n$escapedChanges`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Append
+            Write-Host "变更记录获取成功"
+            
+        } catch {
+            Write-Host "错误: $_"
+            Write-Host "Stack Trace: $($_.ScriptStackTrace)"
+            exit 1
+        }
         
-        $latestCommit = git log -1 --pretty=format:"%s"
-        echo "COMMIT_MSG=$latestCommit" >> $env:GITHUB_OUTPUT
-        
-        # 简化的变更记录获取
-        $changes = git log --oneline -10 --pretty=format:"- %s"
-        echo "CHANGES<<EOF" >> $env:GITHUB_OUTPUT
-        echo "$changes" >> $env:GITHUB_OUTPUT
-        echo "EOF" >> $env:GITHUB_OUTPUT
+    - name: Compile AHK Script
+      uses: CCCC-L/Action-Ahk2Exe@main
+      with:
+        in: VolumeHotkey.ahk
+        out: VolumeHotkey.exe
         
     - name: Create Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: VolumeHotkey${{ steps.info.outputs.DATE }}
-        name: VolumeHotkey${{ steps.info.outputs.DATE }}
+        tag_name: VolumeHotkey${{ env.DATE }}
+        name: VolumeHotkey${{ env.DATE }}
         body: |
           ## 更新内容
-          ${{ steps.info.outputs.CHANGES }}
+          ${{ env.CHANGES }}
+          
         files: VolumeHotkey.exe
         draft: false
         prerelease: false
