@@ -21,8 +21,9 @@ jobs:
     
     - name: Install AutoHotkey v2
       run: |
-        # Download and install AutoHotkey v2
-        Invoke-WebRequest -Uri "https://www.autohotkey.com/download/2.0/AutoHotkey_2.0-setup.exe" -OutFile "AutoHotkey_setup.exe"
+        # Download and install AutoHotkey v2 from GitHub Releases to avoid Cloudflare protection
+        $url = "https://github.com/Lexikos/AutoHotkey_L/releases/latest/download/AutoHotkey_2.0.16_setup.exe"
+        Invoke-WebRequest -Uri $url -OutFile "AutoHotkey_setup.exe" -UseBasicParsing
         Start-Process -FilePath ".\AutoHotkey_setup.exe" -ArgumentList "/S" -Wait
         
     - name: Compile AHK Script
