@@ -30,10 +30,52 @@ jobs:
       run: |
         # Wait a moment for installation to complete
         Start-Sleep -s 5
+        # Check for common installation paths
+        $installPath = ""
+        if (Test-Path "C:\Program Files\AutoHotkey\v2\") {
+            $installPath = "C:\Program Files\AutoHotkey\v2\"
+        } elseif (Test-Path "${env:USERPROFILE}\AppData\Local\Programs\AutoHotkey\") {
+            $installPath = "${env:USERPROFILE}\AppData\Local\Programs\AutoHotkey\"
+        } else {
+            # Look for the installation path using Get-ChildItem
+            $paths = Get-ChildItem "C:\Program Files\*" -Name -Directory | Where-Object { $_ -like "*AutoHotkey*" }
+            if ($paths) {
+                $installPath = "C:\Program Files\$($paths[0])\"
+            }
+        }
+        
+        if (!$installPath) {
+            Write-Error "AutoHotkey installation directory not found!"
+            Get-ChildItem "C:\" -Directory | Where-Object {$_.Name -like "*AutoHotkey*"} | Format-Table Name
+            exit 1
+        }
+        
+        Write-Output "Found AutoHotkey at: $installPath"
+        
         # Verify installation
-        & "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" --version
+        $exePath = Join-Path $installPath "AutoHotkey64.exe"
+        if (Test-Path $exePath) {
+            & $exePath --version
+        } else {
+            Write-Error "AutoHotkey64.exe not found at expected location: $exePath"
+            Get-ChildItem $installPath -Recurse -Name "*AutoHotkey*.exe" | Format-Table
+            exit 1
+        }
+        
+        # Find and copy Ahk2Exe compiler
+        $compilerPath = Join-Path $installPath "Compiler\Ahk2Exe.exe"
+        if (Test-Path $compilerPath) {
+            Copy-Item $compilerPath -Destination "."
+        } else {
+            Write-Error "Ahk2Exe.exe not found at expected location: $compilerPath"
+            Get-ChildItem $installPath -Recurse -Name "Ahk2Exe.exe" | ForEach-Object {
+                $fullPath = Join-Path $installPath $_
+                Write-Output "Found Ahk2Exe.exe at: $fullPath"
+            }
+            exit 1
+        }
+        
         # Compile the script
-        Copy-Item "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe" -Destination "."
         .\Ahk2Exe.exe /in VolumeHotkey.ahk /out VolumeHotkey.exe
         
     - name: Get current date and commit info
