@@ -65,12 +65,35 @@ jobs:
             exit 1
         }
         
+    - name: Install AutoHotkey v2
+      shell: pwsh
+      run: |
+        $url = "https://github.com/Lexikos/AutoHotkey_L/releases/latest/download/AutoHotkey_2.0.21_setup.exe"
+        Invoke-WebRequest -Uri $url -OutFile "AutoHotkey_setup.exe"
+        Start-Process -FilePath ".\AutoHotkey_setup.exe" -ArgumentList "/S" -Wait
+
     - name: Compile AHK Script
       timeout-minutes: 5
-      uses: CCCC-L/Action-Ahk2Exe@main
-      with:
-        in: VolumeHotkey.ahk
-        out: VolumeHotkey.exe
+      shell: pwsh
+      run: |
+        $ahk2exeCandidates = @(
+          "$env:ProgramFiles\AutoHotkey\Compiler\Ahk2Exe.exe",
+          "$env:ProgramFiles(x86)\AutoHotkey\Compiler\Ahk2Exe.exe"
+        )
+
+        $ahk2exe = $ahk2exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $ahk2exe) {
+          throw "未找到 Ahk2Exe.exe，安装路径异常"
+        }
+
+        & $ahk2exe /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
+        if ($LASTEXITCODE -ne 0) {
+          throw "Ahk2Exe 编译失败，退出码: $LASTEXITCODE"
+        }
+
+        if (-not (Test-Path "VolumeHotkey.exe")) {
+          throw "编译完成后未找到 VolumeHotkey.exe"
+        }
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
