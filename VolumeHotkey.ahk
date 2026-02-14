@@ -9,7 +9,7 @@ global GAME_CHECK_INTERVAL := 5000 ; 游戏检测间隔（毫秒）
 
 ; =============== 性能优化设置 ===============
 SetWorkingDir A_ScriptDir
-ProcessSetPriority "AboveNormal"
+ProcessSetPriority "Normal"
 SetBatchLines -1  ; 最高性能模式
 Thread "Interrupt", 0  ; 防止中断关键操作
 
@@ -111,7 +111,7 @@ IsInTopLeftCorner() {
 
 AdjustVolume(direction) {
     ; 防止过于频繁的调用
-    if (A_TickCount - LastVolumeAdjust < 50)  ; 50ms防抖
+    if (A_TickCount - LastVolumeAdjust < 40)  ; 40ms防抖
         return
     
     currentVolume := GetMasterVolume()

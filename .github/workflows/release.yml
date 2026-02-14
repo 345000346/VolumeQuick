@@ -16,7 +16,7 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # 获取完整历史记录用于生成变更日志
     
@@ -75,8 +75,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: VolumeHotkey${{ env.DATE }}
-        name: VolumeHotkey${{ env.DATE }}
+        tag_name: VolumeHotkey${{ env.DATE }}-${{ github.run_number }}-${{ github.run_attempt }}
+        name: VolumeHotkey${{ env.DATE }}-${{ github.run_number }}-${{ github.run_attempt }}
         body: |
           ## 更新内容
           ${{ env.CHANGES }}
