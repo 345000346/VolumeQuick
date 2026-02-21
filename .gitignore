@@ -13,3 +13,7 @@ Desktop.ini
 # 编辑器配置（按需保留）
 .vscode/
 .idea/
+
+# OMC 本地状态
+.omc/
+
