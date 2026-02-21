@@ -1,48 +1,129 @@
-# VolumeQuick - 快捷音量控制工具
+# VolumeQuick
 
-一个简单而高效的 Windows 音量控制工具，让您通过鼠标在屏幕左上角快速调节系统音量。
+一个基于 AutoHotkey v2 的 Windows 音量快捷控制工具。
 
-## ✨ 特性
+当鼠标位于屏幕左上角热区时：
+- 滚轮上/下滚动可增减系统音量
+- 鼠标中键可切换静音状态
 
-- 🎮 在屏幕左上角快速调节系统音量
-- 🖱️ 使用鼠标滚轮直观控制
-- 🔇 中键快速静音/取消静音
-- 🚀 支持开机自启动
-- 💡 低资源占用，运行流畅
-- 🎯 系统托盘快捷操作
+## 目录
 
-## 🚀 使用方法
+- [功能特性](#功能特性)
+- [系统要求](#系统要求)
+- [安装与使用](#安装与使用)
+- [下载完整性校验](#下载完整性校验)
+- [开发指南](#开发指南)
+- [CI 与发布](#ci-与发布)
+- [常见问题与排查](#常见问题与排查)
+- [贡献指南](#贡献指南)
+- [许可证](#许可证)
 
-1. 将鼠标移动到屏幕左上角
-2. 使用鼠标滚轮上下滚动调节音量
-3. 点击鼠标中键切换静音状态
-4. 右键系统托盘图标可设置开机启动
+## 功能特性
 
-## 💻 系统要求
+- 左上角热区触发（默认 20x20）
+- 鼠标滚轮调节系统音量
+- 鼠标中键静音/取消静音
+- 托盘菜单管理运行状态与开机启动
+- 常驻后台，低资源占用
 
-- Windows 10/11
-- [AutoHotkey v2.0](https://www.autohotkey.com/) 或更高版本
-- 不需要管理员权限
+## 系统要求
 
-## 📥 下载和安装
+- Windows 10 / 11
+- AutoHotkey v2.0 或更高版本
+- 普通用户权限即可运行
 
-1. 从 [Releases](../../releases) 页面下载最新版本
-2. 运行下载的 exe 文件
-3. 首次运行时可选择是否开机启动
+## 安装与使用
 
-## 🛠️ 开发环境
+### 方式一：使用 Release 二进制（推荐）
 
-- AutoHotkey v2.0
-- Windows 10/11
+1. 打开 [Releases](../../releases) 页面。
+2. 下载以下文件：
+   - `VolumeHotkey.exe`
+   - `VolumeHotkey.sha256`
+3. 完成哈希校验后运行 `VolumeHotkey.exe`。
 
-## 📄 许可证
+### 方式二：运行源码脚本
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+确保已安装 AutoHotkey v2 后，执行：
 
-## 🤝 贡献
+```bash
+"C:/Program Files/AutoHotkey/v2/AutoHotkey64.exe" "./VolumeHotkey.ahk"
+```
 
-欢迎提交 Issue 和 Pull Request！
+## 下载完整性校验
 
-## 💌 联系方式
+在 Windows PowerShell 中执行：
 
-如有问题或建议，请通过 GitHub Issues 与我联系。
+```powershell
+Get-FileHash .\VolumeHotkey.exe -Algorithm SHA256
+Get-Content .\VolumeHotkey.sha256
+```
+
+确认两处 SHA256 值一致后再运行程序。
+
+## 开发指南
+
+### 本地编译 EXE
+
+```bash
+"C:/Program Files/AutoHotkey/Compiler/Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
+```
+
+若上述路径不存在，可尝试：
+
+```bash
+"C:/Program Files (x86)/AutoHotkey/Compiler/Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
+```
+
+### 手工验证建议
+
+本项目无自动化单元测试框架，建议按单功能进行手工验证：
+
+1. 启动脚本或 EXE。
+2. 将鼠标移动到屏幕左上角热区。
+3. 分别验证：
+   - 滚轮上滑增大音量
+   - 滚轮下滑减小音量
+   - 中键切换静音
+
+## CI 与发布
+
+发布工作流文件：`.github/workflows/release.yml`
+
+- 触发条件：推送 `v*` 标签（示例：`v1.2.0`）
+- 固定版本来源下载 AutoHotkey 与 Ahk2Exe
+- 下载文件执行 SHA256 校验
+- 下载失败/校验失败自动重试 3 次
+- 构建后发布以下产物：
+  - `VolumeHotkey.exe`
+  - `VolumeHotkey.sha256`
+
+## 常见问题与排查
+
+- AutoHotkey 下载失败或哈希不匹配：
+  - 查看工作流日志中的下载地址和预期哈希；
+  - 确认网络可访问上游资源后重试。
+
+- Ahk2Exe 下载失败或哈希不匹配：
+  - 多为网络波动或文件损坏；
+  - 重新运行 workflow 并观察下载步骤日志。
+
+- Ahk2Exe 解压后未找到 `Ahk2Exe.exe`：
+  - 通常为压缩包损坏；
+  - 重新触发工作流即可恢复。
+
+- 编译后未生成 `VolumeHotkey.exe`：
+  - 检查 `VolumeHotkey.ahk` 语法；
+  - 检查 AutoHotkey 基础可执行文件路径是否存在。
+
+## 贡献指南
+
+欢迎提交 Issue 和 Pull Request。
+
+在提交前建议：
+- 保持改动聚焦，避免无关重构
+- 提供必要的复现与验证步骤
+
+## 许可证
+
+本项目采用 MIT License，详见 [LICENSE](LICENSE)。
