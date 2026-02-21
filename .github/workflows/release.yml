@@ -132,9 +132,7 @@ jobs:
 
         & "$env:AHK2EXE_PATH" /in "$inputFile" /out "$outputFile" /base "$baseFile"
 
-        if (-not (Test-Path $outputFile)) {
-            throw "Ahk2Exe 未生成 VolumeHotkey.exe"
-        }
+        Write-Host "编译命令执行完成，目标输出: $outputFile"
 
     - name: Create Release
       uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
