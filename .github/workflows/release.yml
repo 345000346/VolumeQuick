@@ -116,9 +116,20 @@ jobs:
             throw "缺少 AHK2EXE_PATH 环境变量"
         }
 
-        & "$env:AHK2EXE_PATH" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
-        if ($LASTEXITCODE -ne 0) {
-            throw "Ahk2Exe 编译失败，退出码: $LASTEXITCODE"
+        $baseCandidates = @(
+          "C:/Program Files/AutoHotkey/AutoHotkey64.exe",
+          "C:/Program Files/AutoHotkey/v2/AutoHotkey64.exe",
+          "C:/Program Files/AutoHotkey/AutoHotkey.exe"
+        )
+        $baseFile = $baseCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $baseFile) {
+            throw "未找到 AutoHotkey 基础可执行文件"
+        }
+
+        & "$env:AHK2EXE_PATH" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe" /base "$baseFile"
+
+        if (-not (Test-Path "VolumeHotkey.exe")) {
+            throw "Ahk2Exe 未生成 VolumeHotkey.exe"
         }
 
     - name: Create Release
