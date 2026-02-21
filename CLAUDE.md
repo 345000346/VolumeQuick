@@ -65,7 +65,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 触发条件：推送到 `main/master` 或推送 `v*` 标签。
 - 发布流水线：
   1. 检出代码并生成发布元数据（日期、标签名、变更记录）。
-  2. 使用 Ahk2Exe Action 编译 `VolumeHotkey.ahk` -> `VolumeHotkey.exe`。
+  2. 在 CI 中安装 AutoHotkey v2 后，使用 Ahk2Exe 编译 `VolumeHotkey.ahk` -> `VolumeHotkey.exe`。
   3. 使用 `softprops/action-gh-release` 上传 `VolumeHotkey.exe` 并创建 Release。
   4. 标签触发时复用触发标签；分支触发时生成唯一标签，避免同名冲突。
 
