@@ -81,20 +81,42 @@ jobs:
       run: |
         choco install autohotkey --version=2.0.19 -y --no-progress
 
+    - name: Prepare Ahk2Exe
+      shell: pwsh
+      run: |
+        $downloadUrl = ""
+        $release = Invoke-RestMethod "https://api.github.com/repos/AutoHotkey/Ahk2Exe/releases/latest"
+        foreach ($asset in $release.assets) {
+            if ($asset.name -like "*.zip") {
+                $downloadUrl = $asset.browser_download_url
+                break
+            }
+        }
+
+        if (-not $downloadUrl) {
+            throw "未找到 Ahk2Exe 压缩包下载地址"
+        }
+
+        $zipPath = "$env:RUNNER_TEMP/ahk2exe.zip"
+        $extractDir = "$env:RUNNER_TEMP/ahk2exe"
+        Invoke-WebRequest $downloadUrl -OutFile $zipPath
+        Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+
+        $compilerFile = Get-ChildItem -Path $extractDir -Filter "Ahk2Exe.exe" -Recurse | Select-Object -First 1
+        if (-not $compilerFile) {
+            throw "Ahk2Exe 解压后未找到 Ahk2Exe.exe"
+        }
+
+        "AHK2EXE_PATH=$($compilerFile.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
     - name: Compile AHK Script
       shell: pwsh
       run: |
-        $compilerPaths = @(
-          "C:/Program Files/AutoHotkey/Compiler/Ahk2Exe.exe",
-          "C:/Program Files (x86)/AutoHotkey/Compiler/Ahk2Exe.exe"
-        )
-
-        $compiler = $compilerPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-        if (-not $compiler) {
-            throw "未找到 Ahk2Exe.exe，安装可能失败"
+        if (-not $env:AHK2EXE_PATH) {
+            throw "缺少 AHK2EXE_PATH 环境变量"
         }
 
-        & $compiler /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
+        & "$env:AHK2EXE_PATH" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
         if ($LASTEXITCODE -ne 0) {
             throw "Ahk2Exe 编译失败，退出码: $LASTEXITCODE"
         }
