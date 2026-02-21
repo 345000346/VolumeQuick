@@ -76,11 +76,28 @@ jobs:
             exit 1
         }
 
+    - name: Install AutoHotkey v2
+      shell: pwsh
+      run: |
+        choco install autohotkey --version=2.0.19 -y --no-progress
+
     - name: Compile AHK Script
-      uses: CCCC-L/Action-Ahk2Exe@157180102d894288c4b08868dc8c36e54680c0fd
-      with:
-        in: VolumeHotkey.ahk
-        out: VolumeHotkey.exe
+      shell: pwsh
+      run: |
+        $compilerPaths = @(
+          "C:/Program Files/AutoHotkey/Compiler/Ahk2Exe.exe",
+          "C:/Program Files (x86)/AutoHotkey/Compiler/Ahk2Exe.exe"
+        )
+
+        $compiler = $compilerPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $compiler) {
+            throw "未找到 Ahk2Exe.exe，安装可能失败"
+        }
+
+        & $compiler /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Ahk2Exe 编译失败，退出码: $LASTEXITCODE"
+        }
 
     - name: Create Release
       uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
