@@ -126,9 +126,13 @@ jobs:
             throw "未找到 AutoHotkey 基础可执行文件"
         }
 
-        & "$env:AHK2EXE_PATH" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe" /base "$baseFile"
+        $workspace = (Get-Location).Path
+        $inputFile = Join-Path $workspace "VolumeHotkey.ahk"
+        $outputFile = Join-Path $workspace "VolumeHotkey.exe"
 
-        if (-not (Test-Path "VolumeHotkey.exe")) {
+        & "$env:AHK2EXE_PATH" /in "$inputFile" /out "$outputFile" /base "$baseFile"
+
+        if (-not (Test-Path $outputFile)) {
             throw "Ahk2Exe 未生成 VolumeHotkey.exe"
         }
 
