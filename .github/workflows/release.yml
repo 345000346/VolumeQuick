@@ -14,8 +14,8 @@ concurrency:
 
 env:
   AHK_VERSION: 2.0.19
-  AHK_SETUP_EXE: AutoHotkey_2.0.19_setup.exe
-  AHK_SETUP_SHA256: fd55129cbd356f49d2151e0a8b9662d90d2dbbb9579cc2410fde38df94787a3a
+  AHK_ZIP: AutoHotkey_2.0.19.zip
+  AHK_ZIP_SHA256: 4e0d0e65655066a646a210951320feaef0729a3597177131adaec4066bef5869
   AHK2EXE_VERSION: Ahk2Exe1.1.37.02a0a
   AHK2EXE_ZIP: Ahk2Exe1.1.37.02a0.zip
   AHK2EXE_SHA256: 287079ba96dcfa79fa6c568481f4a26bd3ac26671f8a21c4c03ed331657d53c0
@@ -27,26 +27,27 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
-      - name: 安装 AutoHotkey v2（固定来源+哈希校验）
+      - name: 准备 AutoHotkey v2（ZIP 直用+哈希校验）
         shell: pwsh
         run: |
           $workspace = (Get-Location).Path
-          $installerDir = Join-Path $workspace ".ci-cache/autohotkey"
-          $installerPath = Join-Path $installerDir $env:AHK_SETUP_EXE
-          $downloadUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$($env:AHK_VERSION)/$($env:AHK_SETUP_EXE)"
-          $expectedHash = $env:AHK_SETUP_SHA256.ToLower()
+          $cacheDir = Join-Path $workspace ".ci-cache/autohotkey"
+          $zipPath = Join-Path $cacheDir $env:AHK_ZIP
+          $extractDir = Join-Path $cacheDir "AutoHotkey-$($env:AHK_VERSION)"
+          $downloadUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$($env:AHK_VERSION)/$($env:AHK_ZIP)"
+          $expectedHash = $env:AHK_ZIP_SHA256.ToLower()
 
-          New-Item -Path $installerDir -ItemType Directory -Force | Out-Null
+          New-Item -Path $cacheDir -ItemType Directory -Force | Out-Null
 
           $success = $false
           for ($attempt = 1; $attempt -le 3; $attempt++) {
               try {
-                  Write-Host "开始下载 AutoHotkey（第 $attempt/3 次）：$downloadUrl"
-                  Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath -ErrorAction Stop
-                  $downloadedHash = (Get-FileHash -Path $installerPath -Algorithm SHA256).Hash.ToLower()
+                  Write-Host "开始下载 AutoHotkey ZIP（第 $attempt/3 次）：$downloadUrl"
+                  Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -ErrorAction Stop
+                  $downloadedHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLower()
                   if ($downloadedHash -ne $expectedHash) {
                       Write-Host "第 $attempt/3 次下载后哈希校验失败。期望：$expectedHash，实际：$downloadedHash"
-                      Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
+                      Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
                       if ($attempt -lt 3) {
                           Start-Sleep -Seconds 2
                       }
@@ -54,7 +55,7 @@ jobs:
                   }
 
                   $success = $true
-                  Write-Host "AutoHotkey 下载并哈希校验成功。"
+                  Write-Host "AutoHotkey ZIP 下载并哈希校验成功。"
                   break
               } catch {
                   Write-Host "第 $attempt/3 次下载失败：$($_.Exception.Message)"
@@ -65,19 +66,36 @@ jobs:
           }
 
           if (-not $success) {
-              Write-Host "错误：AutoHotkey 下载或哈希校验最终失败。"
+              Write-Host "错误：AutoHotkey ZIP 下载或哈希校验最终失败。"
               Write-Host "下载地址：$downloadUrl"
               Write-Host "预期哈希：$expectedHash"
               exit 1
           }
 
           try {
-              Start-Process -FilePath $installerPath -ArgumentList '/S' -Wait -NoNewWindow
+              if (Test-Path $extractDir) {
+                  Remove-Item -Path $extractDir -Recurse -Force
+              }
+              Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
           } catch {
-              Write-Host "错误：AutoHotkey 静默安装失败。"
+              Write-Host "错误：AutoHotkey ZIP 解压失败，文件路径：$zipPath"
               Write-Host "异常信息：$($_.Exception.Message)"
               exit 1
           }
+
+          $baseCandidates = @(
+            (Join-Path $extractDir "AutoHotkey64.exe"),
+            (Join-Path $extractDir "UX/AutoHotkey64.exe"),
+            (Join-Path $extractDir "AutoHotkey32.exe"),
+            (Join-Path $extractDir "UX/AutoHotkey32.exe")
+          )
+          $baseFile = $baseCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $baseFile) {
+              Write-Host "错误：AutoHotkey ZIP 解压后未找到可用基础可执行文件，目录：$extractDir"
+              exit 1
+          }
+
+          "AHK_BASE_FILE=$baseFile" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: 下载并准备 Ahk2Exe（固定来源+哈希校验）
         shell: pwsh
@@ -146,22 +164,18 @@ jobs:
           if (-not $env:AHK2EXE_PATH) {
               throw "缺少 AHK2EXE_PATH 环境变量"
           }
-
-          $baseCandidates = @(
-            "C:/Program Files/AutoHotkey/AutoHotkey64.exe",
-            "C:/Program Files/AutoHotkey/v2/AutoHotkey64.exe",
-            "C:/Program Files/AutoHotkey/AutoHotkey.exe"
-          )
-          $baseFile = $baseCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $baseFile) {
-              throw "未找到 AutoHotkey 基础可执行文件"
+          if (-not $env:AHK_BASE_FILE) {
+              throw "缺少 AHK_BASE_FILE 环境变量"
+          }
+          if (-not (Test-Path $env:AHK_BASE_FILE)) {
+              throw "AHK_BASE_FILE 指向的文件不存在：$env:AHK_BASE_FILE"
           }
 
           $workspace = (Get-Location).Path
           $inputFile = Join-Path $workspace "VolumeHotkey.ahk"
           $outputFile = Join-Path $workspace "VolumeHotkey.exe"
 
-          & "$env:AHK2EXE_PATH" /in "$inputFile" /out "$outputFile" /base "$baseFile"
+          & "$env:AHK2EXE_PATH" /in "$inputFile" /out "$outputFile" /base "$env:AHK_BASE_FILE"
 
           if (-not (Test-Path $outputFile)) {
               throw "编译命令执行后未生成输出文件：$outputFile"
