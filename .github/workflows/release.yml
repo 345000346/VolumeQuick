@@ -177,6 +177,10 @@ jobs:
 
           & "$env:AHK2EXE_PATH" /in "$inputFile" /out "$outputFile" /base "$env:AHK_BASE_FILE"
 
+          for ($i = 0; $i -lt 10 -and -not (Test-Path $outputFile); $i++) {
+              Start-Sleep -Milliseconds 500
+          }
+
           if (-not (Test-Path $outputFile)) {
               throw "编译命令执行后未生成输出文件：$outputFile"
           }
