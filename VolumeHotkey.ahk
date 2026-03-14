@@ -12,7 +12,6 @@ LEGACY_STARTUP_PATH := A_Startup "\" LEGACY_STARTUP_LINK_NAME
 
 ; =============== 性能优化设置 ===============
 SetWorkingDir A_ScriptDir
-ProcessSetPriority "AboveNormal"
 SetWinDelay -1
 SetControlDelay -1
 
@@ -132,6 +131,6 @@ InitTrayMenu()
 #InputLevel 1
 #HotIf IsInTopLeftCorner()
 WheelUp::AdjustVolume("up")      ; 滚轮上 - 增加音量
-WheelDown::AdjustVolume("down")  ; 滾輪下 - 降低音量
+WheelDown::AdjustVolume("down")  ; 滚轮下 - 降低音量
 MButton::Send "{Volume_Mute}"    ; 中键 - 静音切换
 #HotIf
