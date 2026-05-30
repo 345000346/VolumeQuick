@@ -6,42 +6,17 @@ CORNER_SIZE := 20  ; 左上角热区大小（像素）
 CORNER_CHECK_CACHE_MS := 20
 VOLUME_ADJUST_DEBOUNCE_MS := 50
 STARTUP_LINK_NAME := RegExReplace(A_ScriptName, "\.[^.]+$") ".lnk"
-LEGACY_STARTUP_LINK_NAME := "VolumeHotkey.lnk"
 STARTUP_PATH := A_Startup "\" STARTUP_LINK_NAME
-LEGACY_STARTUP_PATH := A_Startup "\" LEGACY_STARTUP_LINK_NAME
 
 ; =============== 性能优化设置 ===============
 SetWorkingDir A_ScriptDir
-SetWinDelay -1
-SetControlDelay -1
 
 ; =============== 首次运行处理 ===============
 IsStartupEnabled() {
-    if (STARTUP_PATH = LEGACY_STARTUP_PATH)
-        return FileExist(STARTUP_PATH)
-    return FileExist(STARTUP_PATH) || FileExist(LEGACY_STARTUP_PATH)
-}
-
-MigrateLegacyStartupIfNeeded() {
-    static hasTried := false
-    if hasTried
-        return
-    hasTried := true
-
-    if (STARTUP_PATH = LEGACY_STARTUP_PATH)
-        return
-
-    ; 仅在 legacy-only 场景执行迁移
-    if !FileExist(LEGACY_STARTUP_PATH) || FileExist(STARTUP_PATH)
-        return
-
-    try FileCreateShortcut(A_ScriptFullPath, STARTUP_PATH, A_ScriptDir,, "音量控制快捷键工具", A_AhkPath)
-    if FileExist(STARTUP_PATH) && FileExist(LEGACY_STARTUP_PATH)
-        try FileDelete(LEGACY_STARTUP_PATH)
+    return FileExist(STARTUP_PATH)
 }
 
 CheckFirstRun() {
-    ; 新旧命名均不存在时才视为首次运行
     if !IsStartupEnabled() {
         result := MsgBox("是否希望在开机时自动启动音量控制工具？", "首次运行设置", "35")
         if (result = "Yes")
@@ -58,8 +33,6 @@ SetStartup(enable := true) {
         } else {
             if FileExist(STARTUP_PATH)
                 FileDelete(STARTUP_PATH)
-            if (STARTUP_PATH != LEGACY_STARTUP_PATH) && FileExist(LEGACY_STARTUP_PATH)
-                FileDelete(LEGACY_STARTUP_PATH)
             return true
         }
     } catch as err {
@@ -121,14 +94,11 @@ AdjustVolume(direction) {
 }
 
 ; =============== 初始化 ===============
-CoordMode("Mouse", "Screen")
-MigrateLegacyStartupIfNeeded()
 CheckFirstRun()  ; 检查首次运行
 InitTrayMenu()
 
 ; =============== 热键绑定 ===============
 #UseHook true
-#InputLevel 1
 #HotIf IsInTopLeftCorner()
 WheelUp::AdjustVolume("up")      ; 滚轮上 - 增加音量
 WheelDown::AdjustVolume("down")  ; 滚轮下 - 降低音量
