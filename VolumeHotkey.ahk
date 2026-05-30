@@ -18,7 +18,7 @@ IsStartupEnabled() {
 
 CheckFirstRun() {
     if !IsStartupEnabled() {
-        result := MsgBox("是否希望在开机时自动启动音量控制工具？", "首次运行设置", "35")
+        result := MsgBox("是否希望开机时自动启动音量控制工具？`n`n选择“是”会在系统启动目录创建一个快捷方式；不会写入注册表。", "开机启动设置", "36")
         if (result = "Yes")
             SetStartup(true)
     }
