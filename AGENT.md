@@ -2,6 +2,10 @@
 
 AI 编码助手在本仓库中工作时遵循的指引。
 
+## 项目原则
+
+- **轻量绿色免安装**：不写注册表；除用户主动开启开机启动时创建启动快捷方式外，不产生配置文件
+
 ## 项目概览
 
 - **VolumeQuick** — 基于 AutoHotkey v2 的 Windows 音量快捷控制工具
@@ -18,13 +22,13 @@ AI 编码助手在本仓库中工作时遵循的指引。
 ├── VolumeHotkey.ahk          # 唯一源文件（~100 行）
 ├── AGENT.md                  # 本文件
 ├── README.md                 # 用户文档
-├── .gitignore
-└── .github/workflows/release.yml  # CI 发布（v* 标签触发）
+├── LICENSE                   # MIT
+└── .gitignore
 ```
 
 ## 常用命令
 
-> 无 Node/Python/Go/Rust 构建系统，无 lint，无自动化测试。
+> 无构建系统，无 lint，无自动化测试。
 
 ### 本地运行
 
@@ -32,32 +36,7 @@ AI 编码助手在本仓库中工作时遵循的指引。
 "C:/Program Files/AutoHotkey/v2/AutoHotkey64.exe" "./VolumeHotkey.ahk"
 ```
 
-### 本地编译
-
-```bash
-"C:/Program Files/AutoHotkey/Compiler/Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
-```
-
-备用路径：
-
-```bash
-"C:/Program Files (x86)/AutoHotkey/Compiler/Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
-```
-
-### Release 产物校验
-
-```powershell
-Get-FileHash .\VolumeHotkey.exe -Algorithm SHA256
-Get-Content .\VolumeHotkey.sha256
-```
-
-### 手工验证
-
-1. 启动脚本或 EXE
-2. 鼠标移到左上角热区
-3. 滚轮上/下 → 音量增减
-4. 中键 → 静音切换
-5. 确认前台应用不接收滚轮/中键事件
+或直接双击 `VolumeHotkey.ahk`。
 
 ## 架构
 
@@ -78,7 +57,7 @@ Get-Content .\VolumeHotkey.sha256
     → CheckFirstRun() → InitTrayMenu() → 热键注册 → 消息循环
 ```
 
-- `CheckFirstRun()` — 通过启动目录快捷方式判首次运行，弹窗引导自启动
+- `CheckFirstRun()` — 通过启动目录快捷方式判首次运行，弹窗引导自启动（不写注册表）
 - `InitTrayMenu()` — 构建托盘菜单（开机启动开关 + 退出）；若存在 `icon.ico` 则设置托盘图标
 - `ToggleAutoStart()` / `SetStartup()` — 创建/删除 `%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\*.lnk`
 
@@ -103,15 +82,4 @@ MButton::Send "{Volume_Mute}"
 #HotIf
 ```
 
-## CI / 发布
 
-- 文件：`.github/workflows/release.yml`
-- 触发：`push tags: v*`
-- 关键步骤：
-  1. 下载 AutoHotkey v2.0.19 ZIP → SHA256 校验 → 解压
-  2. 下载 Ahk2Exe v1.1.37.02a0 ZIP → SHA256 校验 → 解压
-  3. `Ahk2Exe.exe /in VolumeHotkey.ahk /out VolumeHotkey.exe /base AutoHotkey64.exe`
-  4. 轮询等待输出文件（最多 10×500ms）避免落盘时序误报
-  5. 生成 `VolumeHotkey.sha256`
-  6. 上传到 GitHub Release
-- 产物：`VolumeHotkey.exe` + `VolumeHotkey.sha256`

@@ -1,6 +1,6 @@
 # VolumeQuick
 
-一个基于 AutoHotkey v2 的 Windows 音量快捷控制工具。
+一个基于 AutoHotkey v2 的 Windows 音量快捷控制工具，免安装、轻量绿色。
 
 当鼠标位于屏幕左上角热区（默认 `20x20`）时：
 - `WheelUp` / `WheelDown` 调整系统音量（仅热区内生效，不透传到前台应用）
@@ -13,37 +13,21 @@
 - 中键切换静音（仅热区内生效）
 - 托盘菜单支持开机启动切换与退出
 - 常驻后台，低资源占用
+- 轻量绿色：不写注册表；除用户主动开启开机启动时创建启动快捷方式外，不产生配置文件
 
 ## 环境要求
 
 - Windows 10 / 11
-- 运行 `VolumeHotkey.exe`：无需本地安装 AutoHotkey
-- 运行 `VolumeHotkey.ahk`：需要 AutoHotkey v2.0+
+- [AutoHotkey v2.0+](https://www.autohotkey.com/download/)
 
 ## 安装与使用
 
-### 方式一：使用 Release 二进制（推荐）
+请先安装 [AutoHotkey v2.0+](https://www.autohotkey.com/download/)。
 
-1. 打开 [Releases](../../releases) 页面。
-2. 下载：
-   - `VolumeHotkey.exe`
-   - `VolumeHotkey.sha256`
-3. 在 Windows PowerShell 中校验：
-
-```powershell
-Get-FileHash .\VolumeHotkey.exe -Algorithm SHA256
-Get-Content .\VolumeHotkey.sha256
-```
-
-4. 确认两处 SHA256 一致后运行 `VolumeHotkey.exe`。
-
-### 方式二：运行源码脚本
-
-安装 AutoHotkey v2 后执行：
-
-```bash
-"C:/Program Files/AutoHotkey/v2/AutoHotkey64.exe" "./VolumeHotkey.ahk"
-```
+1. 点击仓库中的 [`VolumeHotkey.ahk`](VolumeHotkey.ahk) 文件。
+2. 点击右上角 **Download raw file**（下载原始文件）按钮；如果只看到 **Raw**，可点击后在浏览器中右键另存为 `VolumeHotkey.ahk`。
+3. 请确认下载后的文件名后缀为 `.ahk`。
+4. 双击下载的 `VolumeHotkey.ahk` 即可运行。
 
 ## 配置项（可选）
 
@@ -53,38 +37,15 @@ Get-Content .\VolumeHotkey.sha256
 - `CORNER_CHECK_CACHE_MS`：热区判定缓存（默认 `20ms`）
 - `VOLUME_ADJUST_DEBOUNCE_MS`：滚轮防抖（默认 `50ms`）
 
-## 开发与构建
-
-### 本地编译 EXE
-
-```bash
-"C:/Program Files/AutoHotkey/Compiler/Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
-```
-
-备用路径：
-
-```bash
-"C:/Program Files (x86)/AutoHotkey/Compiler/Ahk2Exe.exe" /in "VolumeHotkey.ahk" /out "VolumeHotkey.exe"
-```
-
 ## 测试与验证
 
 本项目当前无自动化单元测试，采用手工验证：
 
-1. 启动脚本或 EXE。
+1. 双击运行 `VolumeHotkey.ahk`。
 2. 鼠标移动到左上角热区。
 3. 验证滚轮上/下可调节音量。
 4. 验证中键可切换静音。
 5. 确认热区触发时前台应用不会收到滚轮/中键事件。
-
-## CI 与发布
-
-发布工作流：`.github/workflows/release.yml`
-
-- 触发条件：推送 `v*` 标签（例如 `v1.2.0`）
-- 发布产物：
-  - `VolumeHotkey.exe`
-  - `VolumeHotkey.sha256`
 
 ## 贡献指南
 
