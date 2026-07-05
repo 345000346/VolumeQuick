@@ -10,6 +10,7 @@ STARTUP_PATH := A_Startup "\" STARTUP_LINK_NAME
 
 ; =============== 性能优化设置 ===============
 SetWorkingDir A_ScriptDir
+CoordMode "Mouse", "Screen"
 
 ; =============== 首次运行处理 ===============
 IsStartupEnabled() {
@@ -76,7 +77,7 @@ IsInTopLeftCorner() {
 
     MouseGetPos(&mouseX, &mouseY)
     lastCheck := A_TickCount
-    lastResult := (mouseX <= CORNER_SIZE && mouseY <= CORNER_SIZE)
+    lastResult := (mouseX >= 0 && mouseX < CORNER_SIZE && mouseY >= 0 && mouseY < CORNER_SIZE)
     return lastResult
 }
 
