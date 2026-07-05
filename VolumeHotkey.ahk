@@ -14,7 +14,15 @@ CoordMode "Mouse", "Screen"
 
 ; =============== 首次运行处理 ===============
 IsStartupEnabled() {
-    return FileExist(STARTUP_PATH)
+    if !FileExist(STARTUP_PATH)
+        return false
+
+    try {
+        FileGetShortcut(STARTUP_PATH, &target)
+        return target = A_ScriptFullPath
+    } catch {
+        return false
+    }
 }
 
 CheckFirstRun() {
@@ -28,6 +36,8 @@ CheckFirstRun() {
 SetStartup(enable := true) {
     try {
         if (enable) {
+            if FileExist(STARTUP_PATH) && !IsStartupEnabled()
+                FileDelete(STARTUP_PATH)
             if !FileExist(STARTUP_PATH)
                 FileCreateShortcut(A_ScriptFullPath, STARTUP_PATH, A_ScriptDir,, "音量控制快捷键工具", A_AhkPath)
             return true

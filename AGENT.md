@@ -22,8 +22,7 @@ AI 编码助手在本仓库中工作时遵循的指引。
 ├── VolumeHotkey.ahk          # 唯一源文件（~100 行）
 ├── AGENT.md                  # 本文件
 ├── README.md                 # 用户文档
-├── LICENSE                   # MIT
-└── .gitignore
+└── LICENSE                   # MIT
 ```
 
 ## 常用命令
@@ -81,5 +80,4 @@ WheelDown::AdjustVolume("down")
 MButton::Send "{Volume_Mute}"
 #HotIf
 ```
-
 
