@@ -2,17 +2,15 @@
 #SingleInstance Force
 
 ; =============== 全局常量 ===============
-CORNER_SIZE := 20  ; 左上角热区大小（像素）
-CORNER_CHECK_CACHE_MS := 20
-VOLUME_ADJUST_DEBOUNCE_MS := 50
+CORNER_SIZE := 20  ; 当前显示器左上角热区大小（像素）
 STARTUP_LINK_NAME := RegExReplace(A_ScriptName, "\.[^.]+$") ".lnk"
 STARTUP_PATH := A_Startup "\" STARTUP_LINK_NAME
 
-; =============== 性能优化设置 ===============
+; =============== 环境初始化 ===============
 SetWorkingDir A_ScriptDir
 CoordMode "Mouse", "Screen"
 
-; =============== 首次运行处理 ===============
+; =============== 开机启动 ===============
 IsStartupEnabled() {
     if !FileExist(STARTUP_PATH)
         return false
@@ -35,24 +33,22 @@ CheckFirstRun() {
 
 SetStartup(enable := true) {
     try {
-        if (enable) {
-            if FileExist(STARTUP_PATH) && !IsStartupEnabled()
-                FileDelete(STARTUP_PATH)
-            if !FileExist(STARTUP_PATH)
-                FileCreateShortcut(A_ScriptFullPath, STARTUP_PATH, A_ScriptDir,, "音量控制快捷键工具", A_AhkPath)
-            return true
-        } else {
+        if enable {
+            iconPath := FileExist(A_ScriptDir "\icon.ico") ? A_ScriptDir "\icon.ico" : A_AhkPath
             if FileExist(STARTUP_PATH)
                 FileDelete(STARTUP_PATH)
-            return true
+            FileCreateShortcut(A_ScriptFullPath, STARTUP_PATH, A_ScriptDir,, "音量控制快捷键工具", iconPath)
+        } else if FileExist(STARTUP_PATH) {
+            FileDelete(STARTUP_PATH)
         }
+        return true
     } catch as err {
         MsgBox("设置开机启动失败: " err.Message, "错误", "16 T2")
         return false
     }
 }
 
-; =============== 系统托盘设置 ===============
+; =============== 系统托盘 ===============
 InitTrayMenu() {
     TrayMenu := A_TrayMenu
     TrayMenu.Delete()
@@ -69,49 +65,34 @@ InitTrayMenu() {
 }
 
 ToggleAutoStart(ItemName, ItemPos, Menu) {
-    if !IsStartupEnabled() {
-        if SetStartup(true)
-            Menu.Check(ItemName)
-    } else {
-        if SetStartup(false)
-            Menu.Uncheck(ItemName)
-    }
-}
-
-; =============== 核心功能函数 ===============
-IsInTopLeftCorner() {
-    static lastCheck := 0
-    static lastResult := false
-    if (A_TickCount - lastCheck < CORNER_CHECK_CACHE_MS)
-        return lastResult
-
-    MouseGetPos(&mouseX, &mouseY)
-    lastCheck := A_TickCount
-    lastResult := (mouseX >= 0 && mouseX < CORNER_SIZE && mouseY >= 0 && mouseY < CORNER_SIZE)
-    return lastResult
-}
-
-AdjustVolume(direction) {
-    static lastAdjust := 0
-    if (A_TickCount - lastAdjust < VOLUME_ADJUST_DEBOUNCE_MS)
+    if !SetStartup(!IsStartupEnabled())
         return
-    
-    if (direction = "up")
-        Send "{Volume_Up}"
-    else if (direction = "down")
-        Send "{Volume_Down}"
-    
-    lastAdjust := A_TickCount
+    if IsStartupEnabled()
+        Menu.Check(ItemName)
+    else
+        Menu.Uncheck(ItemName)
+}
+
+; =============== 热区门控 ===============
+; 相对「鼠标所在显示器」的左上角判定，多屏下各屏均可用
+IsInHotCorner() {
+    MouseGetPos(&x, &y)
+    loop MonitorGetCount() {
+        MonitorGet(A_Index, &left, &top, &right, &bottom)
+        if (x >= left && x < right && y >= top && y < bottom)
+            return (x < left + CORNER_SIZE && y < top + CORNER_SIZE)
+    }
+    return false
 }
 
 ; =============== 初始化 ===============
-CheckFirstRun()  ; 检查首次运行
+CheckFirstRun()
 InitTrayMenu()
 
 ; =============== 热键绑定 ===============
 #UseHook true
-#HotIf IsInTopLeftCorner()
-WheelUp::AdjustVolume("up")      ; 滚轮上 - 增加音量
-WheelDown::AdjustVolume("down")  ; 滚轮下 - 降低音量
-MButton::Send "{Volume_Mute}"    ; 中键 - 静音切换
+#HotIf IsInHotCorner()
+WheelUp::Send "{Volume_Up}"
+WheelDown::Send "{Volume_Down}"
+MButton::Send "{Volume_Mute}"
 #HotIf
